@@ -1,0 +1,26 @@
+Index: /trunk/boost/numeric/conversion/converter_policies.hpp
+===================================================================
+--- /trunk/boost/numeric/conversion/converter_policies.hpp	(revision 49254)
++++ /trunk/boost/numeric/conversion/converter_policies.hpp	(revision 77234)
+@@ -14,4 +14,5 @@
+ 
+ #include <boost/config/no_tr1/cmath.hpp> // for std::floor and std::ceil
++#include <boost/throw_exception.hpp>
+ 
+ #include <functional>
+@@ -159,8 +160,15 @@
+   void operator() ( range_check_result r ) // throw(negative_overflow,positive_overflow)
+   {
++#ifndef BOOST_NO_EXCEPTIONS
+     if ( r == cNegOverflow )
+       throw negative_overflow() ;
+     else if ( r == cPosOverflow )
+            throw positive_overflow() ;
++#else
++    if ( r == cNegOverflow )
++      ::boost::throw_exception(negative_overflow()) ;
++    else if ( r == cPosOverflow )
++           ::boost::throw_exception(positive_overflow()) ;
++#endif
+   }
+ } ;
