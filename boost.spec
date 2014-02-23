@@ -4,12 +4,12 @@
 
 Summary:	The Boost C++ Libraries
 Name:		boost
-Version:	1.50.0
-Release:	2
+Version:	1.55.0
+Release:	1
 License:	Boost Software License and others
 Group:		Libraries
 Source0:	http://downloads.sourceforge.net/boost/%{name}_%{fver}.tar.bz2
-# Source0-md5:	52dd00be775e689f55a987baebccc462
+# Source0-md5:	d6eef4b4cacb2183f2bf265a5a03a354
 Patch0:		%{name}-link.patch
 URL:		http://www.boost.org/
 BuildRequires:	bzip2-devel
@@ -20,6 +20,8 @@ BuildRequires:	python-devel
 BuildRequires:	rpm-pythonprov
 BuildRequires:	zlib-devel
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
+
+%define		_noautochrpath  .*%{_includedir}/.*
 
 %description
 The Boost web site provides free peer-reviewed portable C++ source
@@ -66,6 +68,23 @@ Requires:	%{name}-devel = %{version}-%{release}
 Documentation for the Boost C++ Library.
 
 ###
+%package atomic
+Summary:	Boost C++ atmoic library
+Group:		Development/Libraries
+Requires:	%{name} = %{version}-%{release}
+
+%description atomic
+Boost C++ atomic library.
+
+%package atomic-devel
+Summary:	Boost C++ atomic headers
+Group:		Development/Libraries
+Requires:	%{name}-atomic = %{version}-%{release}
+
+%description atomic-devel
+Boost C++ atomic headers.
+
+###
 %package chrono
 Summary:	Boost C++ chrono library
 Group:		Development/Libraries
@@ -81,6 +100,40 @@ Requires:	%{name}-chrono = %{version}-%{release}
 
 %description chrono-devel
 Boost C++ chrono headers.
+
+###
+%package context
+Summary:	Boost C++ context library
+Group:		Development/Libraries
+Requires:	%{name} = %{version}-%{release}
+
+%description context
+Boost C++ context library.
+
+%package context-devel
+Summary:	Boost C++ context headers
+Group:		Development/Libraries
+Requires:	%{name}-context = %{version}-%{release}
+
+%description context-devel
+Boost C++ context headers.
+
+###
+%package coroutine
+Summary:	Boost C++ coroutine library
+Group:		Development/Libraries
+Requires:	%{name} = %{version}-%{release}
+
+%description coroutine
+Boost C++ coroutine library.
+
+%package coroutine-devel
+Summary:	Boost C++ coroutine headers
+Group:		Development/Libraries
+Requires:	%{name}-coroutine = %{version}-%{release}
+
+%description coroutine-devel
+Boost C++ coroutine headers.
 
 ###
 %package date_time
@@ -167,6 +220,39 @@ Requires:	%{name}-locale = %{version}-%{release}
 %description locale-devel
 Boost C++ locale headers.
 
+###
+%package log
+Summary:	Boost C++ log library
+Group:		Development/Libraries
+Requires:	%{name} = %{version}-%{release}
+
+%description log
+Boost C++ log library.
+
+%package log-devel
+Summary:	Boost C++ log headers
+Group:		Development/Libraries
+Requires:	%{name}-log = %{version}-%{release}
+
+%description log-devel
+Boost C++ log headers.
+
+###
+%package log_setup
+Summary:	Boost C++ log_setup library
+Group:		Development/Libraries
+Requires:	%{name} = %{version}-%{release}
+
+%description log_setup
+Boost C++ log_setup library.
+
+%package log_setup-devel
+Summary:	Boost C++ log_setup headers
+Group:		Development/Libraries
+Requires:	%{name}-log_setup = %{version}-%{release}
+
+%description log_setup-devel
+Boost C++ log_setup headers.
 
 ###
 %package math
@@ -406,20 +492,13 @@ Requires:	%{name}-wserialization = %{version}-%{release}
 %description wserialization-devel
 Boost C++ wserialization headers.
 
-%package tools
-Summary:	Boost tools
-Group:		Development/Libraries
-
-%description tools
-Boost tools.
-
 %prep
 %setup -qn %{name}_%{fver}
 %patch0 -p1
 
-sed -i "s/<optimization>speed : -O3/<optimization>speed : ${CXXFLAGS:-%rpmcxxflags} -fPIC/" tools/build/v2/tools/gcc.jam
-sed -i 's/<debug-symbols>on : -g/<debug-symbols>on :/' tools/build/v2/tools/gcc.jam
-sed -i 's:find-static:find-shared:' libs/graph/build/Jamfile.v2
+%{__sed} -i "s/<optimization>speed : -O3/<optimization>speed : ${CXXFLAGS:-%rpmcxxflags} -fPIC/" tools/build/v2/tools/gcc.jam
+%{__sed} -i 's/<debug-symbols>on : -g/<debug-symbols>on :/' tools/build/v2/tools/gcc.jam
+%{__sed} -i 's:find-static:find-shared:' libs/graph/build/Jamfile.v2
 
 echo "using mpi ;" >> tools/build/v2/user-config.jam
 
@@ -428,55 +507,49 @@ using gcc : %(%{__cxx} -dumpversion) : %{__cxx} ;
 EOF
 
 %build
-PYTHON_ROOT=%{_prefix}
-PYTHON_VERSION=2.5
+./bootstrap.sh \
+	--with-icu		\
+	--with-toolset=gcc
 
 mkdir -p dist/bin
-cd tools/build/v2/engine
-./build.sh gcc
-cd ../../../../
-%ifarch %{ix86}
-cp tools/build/v2/engine/bin.linuxx86/bjam dist/bin
-%endif
-%ifarch %{x8664}
-cp tools/build/v2/engine/bin.linuxx86_64/bjam dist/bin
-%endif
+install tools/build/v2/engine/bin.linux*/b2 dist/bin
 
-cd tools
-../dist/bin/bjam release	\
-	--toolset=gcc		\
-	-d2			\
-	cflags="%{rpmcflags}"	\
-	debug-symbols=on
-cd ..
-
-./dist/bin/bjam release		\
+./dist/bin/b2 \
 	--layout=system		\
+	--prefix=./dist		\
 	--toolset=gcc		\
 	-d2			\
+	-q %{?_smp_mflags}	\
 	cflags="%{rpmcflags}"	\
+	linkflags="%{rpmldflags}"   \
 	debug-symbols=on	\
-	link=shared		\
-	runtime-link=shared	\
 	inlining=on		\
-	threading=multi
+	link=shared		\
+	pch=off			\
+	python=2.7		\
+	runtime-link=shared	\
+	threading=multi		\
+	variant=release		\
+	install
 
 %install
 rm -rf $RPM_BUILD_ROOT
-install -d $RPM_BUILD_ROOT{%{_bindir},%{_datadir}/boostbook,%{_libdir},%{_includedir}}
+install -d $RPM_BUILD_ROOT{%{_libdir},%{_includedir}}
 
-cp -rf boost $RPM_BUILD_ROOT%{_includedir}
-
-install -p stage/lib/lib*.so.* $RPM_BUILD_ROOT%{_libdir}
-cp -a stage/lib/lib*.so $RPM_BUILD_ROOT%{_libdir}
-install -p dist/bin/* $RPM_BUILD_ROOT%{_bindir}
-cp -rf dist/share/* $RPM_BUILD_ROOT%{_datadir}
+cp -a dist/lib/* $RPM_BUILD_ROOT%{_libdir}
+cp -rf dist/include/* $RPM_BUILD_ROOT%{_includedir}
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
-%post	chrono -p /usr/sbin/ldconfig
-%postun	chrono -p /usr/sbin/ldconfig
+%post	atomic -p /usr/sbin/ldconfig
+%postun	atomic -p /usr/sbin/ldconfig
+
+%post	context -p /usr/sbin/ldconfig
+%postun	context -p /usr/sbin/ldconfig
+
+%post	coroutine -p /usr/sbin/ldconfig
+%postun	coroutine -p /usr/sbin/ldconfig
 
 %post	date_time -p /usr/sbin/ldconfig
 %postun	date_time -p /usr/sbin/ldconfig
@@ -489,6 +562,12 @@ rm -rf $RPM_BUILD_ROOT
 
 %post	locale -p /usr/sbin/ldconfig
 %postun	locale -p /usr/sbin/ldconfig
+
+%post	log -p /usr/sbin/ldconfig
+%postun	log -p /usr/sbin/ldconfig
+
+%post	log_setup -p /usr/sbin/ldconfig
+%postun	log_setup -p /usr/sbin/ldconfig
 
 %post	iostreams -p /usr/sbin/ldconfig
 %postun	iostreams -p /usr/sbin/ldconfig
@@ -545,6 +624,15 @@ rm -rf $RPM_BUILD_ROOT
 %{_docdir}/%{name}-%{version}
 
 ###
+%files atomic
+%defattr(644,root,root,755)
+%attr(755,root,root) %{_libdir}/libboost_atomic.so.*
+
+%files atomic-devel
+%defattr(644,root,root,755)
+%attr(755,root,root) %{_libdir}/libboost_atomic.so
+
+###
 %files chrono
 %defattr(644,root,root,755)
 %attr(755,root,root) %{_libdir}/libboost_chrono.so.*
@@ -552,6 +640,24 @@ rm -rf $RPM_BUILD_ROOT
 %files chrono-devel
 %defattr(644,root,root,755)
 %attr(755,root,root) %{_libdir}/libboost_chrono.so
+
+###
+%files context
+%defattr(644,root,root,755)
+%attr(755,root,root) %{_libdir}/libboost_context.so.*
+
+%files context-devel
+%defattr(644,root,root,755)
+%attr(755,root,root) %{_libdir}/libboost_context.so
+
+###
+%files coroutine
+%defattr(644,root,root,755)
+%attr(755,root,root) %{_libdir}/libboost_coroutine.so.*
+
+%files coroutine-devel
+%defattr(644,root,root,755)
+%attr(755,root,root) %{_libdir}/libboost_coroutine.so
 
 ###
 %files date_time
@@ -599,6 +705,24 @@ rm -rf $RPM_BUILD_ROOT
 %files locale-devel
 %defattr(644,root,root,755)
 %attr(755,root,root) %{_libdir}/libboost_locale.so
+
+###
+%files log
+%defattr(644,root,root,755)
+%attr(755,root,root) %{_libdir}/libboost_log.so.*
+
+%files log-devel
+%defattr(644,root,root,755)
+%attr(755,root,root) %{_libdir}/libboost_log.so
+
+###
+%files log_setup
+%defattr(644,root,root,755)
+%attr(755,root,root) %{_libdir}/libboost_log_setup.so.*
+
+%files log_setup-devel
+%defattr(644,root,root,755)
+%attr(755,root,root) %{_libdir}/libboost_log_setup.so
 
 ###
 %files math
@@ -729,9 +853,4 @@ rm -rf $RPM_BUILD_ROOT
 %files wserialization-devel
 %defattr(644,root,root,755)
 %attr(755,root,root) %{_libdir}/libboost_wserialization.so
-
-%files tools
-%defattr(644,root,root,755)
-%attr(755,root,root) %{_bindir}/*
-%{_datadir}/boostbook
 
