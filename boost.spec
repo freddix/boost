@@ -4,12 +4,12 @@
 
 Summary:	The Boost C++ Libraries
 Name:		boost
-Version:	1.55.0
+Version:	1.56.0
 Release:	1
 License:	Boost Software License and others
 Group:		Libraries
 Source0:	http://downloads.sourceforge.net/boost/%{name}_%{fver}.tar.bz2
-# Source0-md5:	d6eef4b4cacb2183f2bf265a5a03a354
+# Source0-md5:	a744cf167b05d72335f27c88115f211d
 Patch0:		%{name}-link.patch
 URL:		http://www.boost.org/
 BuildRequires:	bzip2-devel
@@ -35,12 +35,19 @@ upcoming C++ Standard Library Technical Report.
 %package devel
 Summary:	Boost C++ development headers
 Group:		Development/Libraries
+Requires:	%{name}-atomic-devel = %{version}-%{release}
 Requires:	%{name}-chrono-devel = %{version}-%{release}
+Requires:	%{name}-container-devel = %{version}-%{release}
+Requires:	%{name}-context-devel = %{version}-%{release}
+Requires:	%{name}-coroutine-devel = %{version}-%{release}
 Requires:	%{name}-date_time-devel = %{version}-%{release}
 Requires:	%{name}-filesystem-devel = %{version}-%{release}
 Requires:	%{name}-graph-devel = %{version}-%{release}
 Requires:	%{name}-iostreams-devel = %{version}-%{release}
 Requires:	%{name}-locale-devel = %{version}-%{release}
+Requires:	%{name}-log-devel = %{version}-%{release}
+Requires:	%{name}-log_setup-devel = %{version}-%{release}
+Requires:	%{name}-math-devel = %{version}-%{release}
 Requires:	%{name}-prg_exec_monitor-devel = %{version}-%{release}
 Requires:	%{name}-program_options-devel = %{version}-%{release}
 Requires:	%{name}-python-devel = %{version}-%{release}
@@ -100,6 +107,23 @@ Requires:	%{name}-chrono = %{version}-%{release}
 
 %description chrono-devel
 Boost C++ chrono headers.
+
+###
+%package container
+Summary:	Boost C++ container library
+Group:		Development/Libraries
+Requires:	%{name} = %{version}-%{release}
+
+%description container
+Boost C++ container library.
+
+%package container-devel
+Summary:	Boost C++ container headers
+Group:		Development/Libraries
+Requires:	%{name}-container = %{version}-%{release}
+
+%description container-devel
+Boost C++ container headers.
 
 ###
 %package context
@@ -496,25 +520,16 @@ Boost C++ wserialization headers.
 %setup -qn %{name}_%{fver}
 %patch0 -p1
 
-%{__sed} -i "s/<optimization>speed : -O3/<optimization>speed : ${CXXFLAGS:-%rpmcxxflags} -fPIC/" tools/build/v2/tools/gcc.jam
-%{__sed} -i 's/<debug-symbols>on : -g/<debug-symbols>on :/' tools/build/v2/tools/gcc.jam
-%{__sed} -i 's:find-static:find-shared:' libs/graph/build/Jamfile.v2
-
-echo "using mpi ;" >> tools/build/v2/user-config.jam
-
-cat << EOF > tools/build/v2/user-config.jam
-using gcc : %(%{__cxx} -dumpversion) : %{__cxx} ;
-EOF
-
 %build
 ./bootstrap.sh \
 	--with-icu		\
 	--with-toolset=gcc
 
-mkdir -p dist/bin
-install tools/build/v2/engine/bin.linux*/b2 dist/bin
+echo "using mpi ;" >> project-config.jam
+%{__sed} -i -e  "s|using gcc ;|using gcc : %(%{__cxx} -dumpversion) : %{__cxx} ;|" project-config.jam
 
-./dist/bin/b2 \
+install -d dist
+./b2 \
 	--layout=system		\
 	--prefix=./dist		\
 	--toolset=gcc		\
@@ -640,6 +655,15 @@ rm -rf $RPM_BUILD_ROOT
 %files chrono-devel
 %defattr(644,root,root,755)
 %attr(755,root,root) %{_libdir}/libboost_chrono.so
+
+###
+%files container
+%defattr(644,root,root,755)
+%attr(755,root,root) %{_libdir}/libboost_container.so.*
+
+%files container-devel
+%defattr(644,root,root,755)
+%attr(755,root,root) %{_libdir}/libboost_container.so
 
 ###
 %files context
